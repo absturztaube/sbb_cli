@@ -23,8 +23,13 @@ Time and Date can be specified by `-t` and `-d` switches
 
 	./sbb.sh -d 14.10.2018 -t 10:15 bern zürich
 
-Via is implemented by `-v` but not tested yet
-Same goes for using the specified time as arrival time with `-a`
+Via is implemented by `-v`
+
+	./sbb.sh -v lausanne brig bern
+
+If date and/or time should be used to search for arrival time, use `-a`
+
+	./sbb.sh -t 20:00 -a bern basel
 
 ## Infos
 
