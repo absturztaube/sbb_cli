@@ -128,7 +128,4 @@ if [ -z "${timestamp}" ] ; then
     timestamp=$(date +"%H:%M")
 fi
 
-echo "Searching Connections at $datestamp $timestamp"
-echo "$from - $to"
-
 request_connection "$from" "$to" "$via" "$datestamp" "$timestamp" "$arrival"
