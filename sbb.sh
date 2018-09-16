@@ -59,8 +59,8 @@ function print_connection_header {
 
     echo "$station_from - $station_to"
     
-    departure_time=$(date -d$(echo $1 | jq -r "$2.from.departure") +"%H:%M")
-    arrival_time=$(date -d$(echo $1 | jq -r "$2.to.arrival") +"%H:%M")
+    departure_time=$(date -d @$(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
+    arrival_time=$(date -d @$(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
     duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -r 's/^[0-9]+d//gi')
     transfers=$(echo $1 | jq -r "$2.transfers")
 
@@ -75,14 +75,14 @@ function print_section {
     fi
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.departure.station.name")")
-    stime=$(date -d $(echo $1 | jq -r "$2.departure.departure") +"%H:%M")
+    stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
     platform=$(echo $1 | jq -r "$2.departure.platform")
     product=$(echo $1 | jq -r "$2.journey.name")
 
     echo "+- $station ab $stime: Gleis $platform [$product]"
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.arrival.station.name")")
-    stime=$(date -d$(echo $1 | jq -r "$2.arrival.arrival") +"%H:%M")
+    stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
     platform=$(echo $1 | jq -r "$2.arrival.platform")
 
     echo "+- $station an $stime: Gleis $platform"
