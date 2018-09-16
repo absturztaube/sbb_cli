@@ -10,7 +10,7 @@ function usage {
     echo "      -d  Date to search for connections"
     echo "      -v  Spevifies a via Station"
     echo "      -a  Uses the Date and Time for Arrival"
-    echo "	-i  Use it and be happy"
+    echo "      -i  Use it and be happy"
     exit
 }
 
