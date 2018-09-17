@@ -31,25 +31,20 @@ function request_connection {
     
     resultJson=$(curl -s "$SBB_API_BASE?$queryString")
     
-    readarray connections < <(echo $resultJson | jq -r '.connections[].duration')
-
-    i_connection=0
-    for connection in "${connections[@]}"
-    do
+    local i_connection=0
+    echo $resultJson | jq -r '.connections[].duration' | while read connection; do
 	print_connection "$resultJson" ".connections[$i_connection]"
-	i_connection=$(expr $i_connection + 1)
+	(( i_connection++ ))
     done
 }
 
 function print_connection {
     print_connection_header "$1" "$2"
 
-    readarray sections < <(echo $1 | jq -r "$2.sections[].walk")
-    i_section=0
-    for section in "${sections[@]}"
-    do
+    local i_section=0
+    echo $1 | jq -r "$2.sections[].walk" | while read section; do
 	print_section "$1" "$2.sections[$i_section]" $i_section
-	i_section=$(expr $i_section + 1)
+	(( i_section++ ))
     done
 }
 
@@ -61,9 +56,18 @@ function print_connection_header {
 
     echo "$station_from - $station_to"
     
-    departure_time=$(date -d @$(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
-    arrival_time=$(date -d @$(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
-    duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -r 's/^[0-9]+d//gi')
+    if [[ "$os" = Linux ]]; then
+        departure_time=$(date -d @$(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
+        arrival_time=$(date -d @$(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
+	duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -r 's/^[0-9]+d//gi')
+    elif [[ "$os" = "macOS" ]]; then
+        departure_time=$(date -j -f "%s" $(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
+        arrival_time=$(date -j -f "%s" $(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
+	duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -E 's/^[0-9]+d//g')
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     transfers=$(echo $1 | jq -r "$2.transfers")
 
     echo "Abfahrt: $departure_time"
@@ -77,14 +81,28 @@ function print_section {
     fi
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.departure.station.name")")
-    stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    if [[ "$os" = Linux ]]; then
+	stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    elif [[ "$os" = "macOS" ]]; then
+	stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     platform=$(echo $1 | jq -r "$2.departure.platform")
     product=$(echo $1 | jq -r "$2.journey.name")
 
     echo "+- $station ab $stime: Gleis $platform [$product]"
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.arrival.station.name")")
-    stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    if [[ "$os" = Linux ]]; then
+	stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    elif [[ "$os" = "macOS" ]]; then
+	stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     platform=$(echo $1 | jq -r "$2.arrival.platform")
 
     echo "+- $station an $stime: Gleis $platform"
@@ -130,6 +148,9 @@ function print_ascii_art {
     exit
 }
 
+os=Linux
+[[ $(uname) = "Darwin" ]] && os=macOS
+
 arrival=0
 while getopts ":t:d:v:aiV" o; do
     case "${o}" in
@@ -139,7 +160,14 @@ while getopts ":t:d:v:aiV" o; do
             ;;
         d)
             datestamp_raw=${OPTARG}
-            datestamp=$(date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    if [[ "$os" = Linux ]]; then
+		datestamp=$(date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    elif [[ "$os" = "macOS" ]]; then
+		datestamp=$(date -j -f "%Y-%m-%d" "$(echo $datestamp_raw | sed -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    else
+		echo "Unkown OS"
+		exit 1
+	    fi
             ;;
         v)
             via=${OPTARG}
