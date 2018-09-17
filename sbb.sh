@@ -61,9 +61,18 @@ function print_connection_header {
 
     echo "$station_from - $station_to"
     
-    departure_time=$(date -d @$(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
-    arrival_time=$(date -d @$(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
-    duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -r 's/^[0-9]+d//gi')
+    if [[ "$os" = Linux ]]; then
+        departure_time=$(date -d @$(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
+        arrival_time=$(date -d @$(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
+	duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -r 's/^[0-9]+d//gi')
+    elif [[ "$os" = "macOS" ]]; then
+        departure_time=$(date -j -f "%s" $(echo $1 | jq -r "$2.from.departureTimestamp") +"%H:%M")
+        arrival_time=$(date -j -f "%s" $(echo $1 | jq -r "$2.to.arrivalTimestamp") +"%H:%M")
+	duration=$(echo $(echo $1 | jq -r "$2.duration") | sed -E 's/^[0-9]+d//g')
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     transfers=$(echo $1 | jq -r "$2.transfers")
 
     echo "Abfahrt: $departure_time"
@@ -77,14 +86,28 @@ function print_section {
     fi
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.departure.station.name")")
-    stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    if [[ "$os" = Linux ]]; then
+	stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    elif [[ "$os" = "macOS" ]]; then
+	stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     platform=$(echo $1 | jq -r "$2.departure.platform")
     product=$(echo $1 | jq -r "$2.journey.name")
 
     echo "+- $station ab $stime: Gleis $platform [$product]"
 
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.arrival.station.name")")
-    stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    if [[ "$os" = Linux ]]; then
+	stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    elif [[ "$os" = "macOS" ]]; then
+	stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+    else
+	echo "Unkown OS"
+	exit 1
+    fi
     platform=$(echo $1 | jq -r "$2.arrival.platform")
 
     echo "+- $station an $stime: Gleis $platform"
@@ -129,6 +152,9 @@ function print_ascii_art {
     echo ""
     exit
 }
+
+os=Linux
+[[ $(uname) = "Darwin" ]] && os=macOS
 
 arrival=0
 while getopts ":t:d:v:aiV" o; do
