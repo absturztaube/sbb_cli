@@ -37,4 +37,4 @@ Feel free to use this thing. Fork it, and make it your own^^
 
 ## Contributions
 
-Thanks to @nohillslide for adding support for macOS
+Thanks to @nohillside for adding support for macOS
