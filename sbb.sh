@@ -160,7 +160,14 @@ while getopts ":t:d:v:aiV" o; do
             ;;
         d)
             datestamp_raw=${OPTARG}
-            datestamp=$(date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    if [[ "$os" = Linux ]]; then
+		datestamp=$(date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    elif [[ "$os" = "macOS" ]]; then
+		datestamp=$(date -j -f "%Y-%m-%d" "$(echo $datestamp_raw | sed -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+	    else
+		echo "Unkown OS"
+		exit 1
+	    fi
             ;;
         v)
             via=${OPTARG}
