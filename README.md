@@ -34,3 +34,7 @@ If date and/or time should be used to search for arrival time, use `-a`
 ## Infos
 
 Feel free to use this thing. Fork it, and make it your own^^
+
+## Contributions
+
+Thanks to @nohillslide for adding support for macOS
