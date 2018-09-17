@@ -160,7 +160,7 @@ while getopts ":t:d:v:aiV" o; do
             ;;
         d)
             datestamp_raw=${OPTARG}
-            datestamp=$(date -d date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
+            datestamp=$(date -d "$(echo $datestamp_raw | sed -r 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\3-\2-\1/')" +"%d.%m.%Y")
             ;;
         v)
             via=${OPTARG}
