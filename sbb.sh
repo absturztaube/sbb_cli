@@ -31,21 +31,20 @@ function request_connection {
     
     resultJson=$(curl -s "$SBB_API_BASE?$queryString")
     
-    connections=$(echo $resultJson | jq -r '.connections[].duration' | wc -l)
-
-    for (( i_connection=0; i_connection < connections; i_connection++ ))
-    do
+    local i_connection=0
+    echo $resultJson | jq -r '.connections[].duration' | while read connection; do
 	print_connection "$resultJson" ".connections[$i_connection]"
+	(( i_connection++ ))
     done
 }
 
 function print_connection {
     print_connection_header "$1" "$2"
 
-    sections=$(echo $1 | jq -r "$2.sections[].walk" | wc -l)
-    for (( i_section=0; i_section < sections; i_section++ ))
-    do
+    local i_section=0
+    echo $1 | jq -r "$2.sections[].walk" | while read section; do
 	print_section "$1" "$2.sections[$i_section]" $i_section
+	(( i_section++ ))
     done
 }
 
