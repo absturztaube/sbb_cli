@@ -15,19 +15,19 @@ function usage {
 }
 
 function append_if_not_empty {
-    if [ -z $2 ] ; then
+    if [ -z "$2" ] || [ "$2" = "null" ] ; then
         echo $1
     else
-        echo "$1$2"
+        echo "$1$3"
     fi
 }
 
 function request_connection {
     queryString="from=$1&to=$2"
-    queryString=$(append_if_not_empty $queryString "&via=$3")
-    queryString=$(append_if_not_empty $queryString "&date=$4")
-    queryString=$(append_if_not_empty $queryString "&time=$5")
-    queryString=$(append_if_not_empty $queryString "&isArrivalTime=$6")
+    queryString=$(append_if_not_empty $queryString "$3" "&via=$3")
+    queryString=$(append_if_not_empty $queryString "$4" "&date=$4")
+    queryString=$(append_if_not_empty $queryString "$5" "&time=$5")
+    queryString=$(append_if_not_empty $queryString "$6" "&isArrivalTime=$6")
     
     resultJson=$(curl -s "$SBB_API_BASE?$queryString")
     
@@ -42,7 +42,7 @@ function print_connection {
     print_connection_header "$1" "$2"
 
     local i_section=0
-    echo $1 | jq -r "$2.sections[].walk" | while read section; do
+    echo $1 | jq -r "$2.sections[].departure.station.name" | while read section; do
 	print_section "$1" "$2.sections[$i_section]" $i_section
 	(( i_section++ ))
     done
@@ -76,10 +76,6 @@ function print_connection_header {
 }
 
 function print_section {
-    if [ $i_section -ne 0 ] ; then
-	echo "|  - [Umsteigen]"
-    fi
-
     station=$(printf "%-15s" "$(echo $1 | jq -r "$2.departure.station.name")")
     if [[ "$os" = Linux ]]; then
 	stime=$(date -d @$(echo $1 | jq -r "$2.departure.departureTimestamp") +"%H:%M")
@@ -91,21 +87,40 @@ function print_section {
     fi
     platform=$(echo $1 | jq -r "$2.departure.platform")
     product=$(echo $1 | jq -r "$2.journey.name")
+    walk_object=$(echo $1 | jq -r "$2.walk")
 
-    echo "+- $station ab $stime: Gleis $platform [$product]"
-
-    station=$(printf "%-15s" "$(echo $1 | jq -r "$2.arrival.station.name")")
-    if [[ "$os" = Linux ]]; then
-	stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
-    elif [[ "$os" = "macOS" ]]; then
-	stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
-    else
-	echo "Unkown OS"
-	exit 1
+    if [ $i_section -ne 0 ] && [ "$walk_object" = "null" ] ; then
+	prev_section=".connections[$i_connection].sections[$(($i_section - 1))]"
+	prev_walk_object=$(echo $1 | jq -r "$prev_section.walk")
+	if [ "$prev_walk_object" = "null" ] ; then
+	   echo "|  - [Umsteigen]"
+	fi
     fi
-    platform=$(echo $1 | jq -r "$2.arrival.platform")
 
-    echo "+- $station an $stime: Gleis $platform"
+    if [ "$walk_object" != "null" ] ; then
+	echo "|  - [Fussweg]"
+    else
+	departure_string="+- $station ab $stime"
+	departure_string=$(append_if_not_empty "$departure_string" "$platform" ": Gleis $platform")
+	departure_string=$(append_if_not_empty "$departure_string" "$product" " [$product]")
+	echo "$departure_string"
+
+        station=$(printf "%-15s" "$(echo $1 | jq -r "$2.arrival.station.name")")
+        if [[ "$os" = Linux ]]; then
+	    stime=$(date -d @$(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+        elif [[ "$os" = "macOS" ]]; then
+	    stime=$(date -j -f "%s" $(echo $1 | jq -r "$2.arrival.arrivalTimestamp") +"%H:%M")
+        else
+	    echo "Unkown OS"
+	    exit 1
+	fi
+	
+	platform=$(echo $1 | jq -r "$2.arrival.platform")
+
+	arrival_string="+- $station an $stime"
+	arrival_string=$(append_if_not_empty "$arrival_string" "$platform" ": Gleis $platform")
+        echo "$arrival_string"
+    fi
 }
 
 function print_ascii_art {
@@ -115,6 +130,9 @@ function print_ascii_art {
     echo '|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|'
     echo ""
     echo "Created by absturztaube <me@absturztau.be>"
+    echo "Contributors:"
+    echo " - nohillside"
+    echo ""
     echo "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░"
     echo "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░"
     echo "░░░░░░░░░░░░░░░░░░░░▒▓██████▓▓▓███▓▒░░░░░░░░░░░░░░░░░░░░░░░"
